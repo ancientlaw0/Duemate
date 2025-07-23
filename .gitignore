@@ -1,0 +1,26 @@
+# Python cache
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Logs
+logs/
+*.log
+
+# Editor/IDE settings
+.vscode/
+.idea/
+
+# Flask instance folder (for per-machine configs)
+instance/
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# Node (if ever using frontend build)
+node_modules/
+
+# Local databases
+*.sqlite3
+*.db
