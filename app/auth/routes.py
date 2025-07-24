@@ -1,10 +1,11 @@
 from flask import request, session ,  jsonify
 import sqlalchemy as sa
+from pydantic import ValidationError
 from app import db
 from app.auth import bp
 from app.models import User
 from functools import wraps
-from app.auth.forms import MobileLoginForm,EmailLoginForm, OtpForm
+from app.auth.schema import MobileLoginSchema,EmailLoginSchema, OtpSchema
 from random import randint
 from app.utils import send_email,send_SMS, generate_jwt # temp email sending logic
 from datetime import datetime, timedelta
@@ -16,20 +17,9 @@ def otp_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if not session.get("otp") or not (session.get("email") or session.get("phone_number")):
-            return jsonify({"status": "error","next": session.get("next", "/login/email"), "message": "OTP session invalid"}), 403
+            return jsonify({"status": "error", "message": "OTP session invalid"}), 403
         return f(*args, **kwargs)
     return decorated_function
-
-def is_safe_url(target):
-    ref_url = urlparse(request.host_url)
-    test_url = urlparse(urljoin(request.host_url, target))
-    return test_url.scheme in ('http', 'https') and ref_url.netloc == test_url.netloc
-
-@bp.before_app_request 
-def capture_next_url():
-    next_url = request.args.get("next")
-    if next_url and is_safe_url(next_url):
-        session["next"] = next_url
 
 
 @bp.errorhandler(RateLimitExceeded)
@@ -39,118 +29,173 @@ def ratelimit_handler(e):
         "message": "Too many OTP attempts. Try again later."
     }), 429
 
-@bp.route('/login/email', methods=['GET', 'POST'])
+@bp.route('/login/email', methods=['POST'])
 def login_email():
-    form = EmailLoginForm()
-    if form.validate_on_submit():
-        user = db.session.scalar(
-            sa.select(User).where(User.email == form.email.data)
-        )
-
-        if not user:
-            user = User(email=form.email.data)
-            db.session.add(user)
-            db.session.commit() # return json here for sucess
-
-        # OTP generation
-        otp = str(randint(100000, 999999)) 
-        session['otp'] = otp
-        session['otp_time'] = datetime.now().isoformat()
-        session['email'] = form.email.data
-       
-        send_email(form.email.data, otp)  # abstract this in util
-
-        return jsonify({
-            "status": "success",
-            "next": session.get("next", "/verify_otp"),
-            "message": f"OTP sent to {form.email.data}"
-        }), 200
-
-    return jsonify({"status": "fail","next": session.get("next", "/login/email"), "errors": form.errors}), 400
-
-@bp.route('/login/mobile', methods=['GET', 'POST'])
-def login_mobile():
-    form = MobileLoginForm()
-    if form.validate_on_submit():
-        user = db.session.scalar(
-            sa.select(User).where(User.phone_number == form.phone_number.data)
-        )
-
-        if not user:
-            user = User(phone_number=form.phone_number.data)
-            db.session.add(user)
-            db.session.commit() # return json here for sucess
-
-        # OTP generation
-        otp = str(randint(100000, 999999)) 
-        session['otp'] = otp
-        session['otp_time'] = datetime.now().isoformat() 
-        session['phone_number'] = form.phone_number.data
-
-       
-        send_SMS(form.phone_number.data, otp)  # abstract this in util
+    try:
         
+        data = EmailLoginSchema(**request.get_json())
+    except ValidationError as e:
         return jsonify({
-            "status": "success",
-            "next": session.get("next", "/verify_otp"),
-            "message": f"OTP sent to {form.phone_number.data}"
-        }), 200
+            "status": "fail", 
+            "errors": e.errors()
+        }), 400
+    except Exception as e:
+        return jsonify({
+            "status": "fail", 
+            "message": "Invalid JSON"
+        }), 400
 
-    return jsonify({"status": "fail","next": session.get("next", "/login/mobile"), "errors": form.errors}), 400
+  
+    user = db.session.scalar(sa.select(User).where(User.email == data.email))
+
+    if not user:
+        user = User(email=data.email)
+        db.session.add(user)
+        db.session.commit()
+
+    
+    otp = str(randint(100000, 999999))
+    session['otp'] = otp
+    session['otp_time'] = datetime.now().isoformat()
+    session['email'] = data.email
+
+    
+    try:
+        send_email(data.email, otp)
+    except Exception as e:
+        return jsonify({
+            "status": "fail",
+            "message": "Failed to send OTP"
+        }), 500
+
+    return jsonify({
+        "status": "success",
+        "message": f"OTP sent to {data.email}"
+    }), 200
+
+@bp.route('/login/mobile', methods=['POST'])
+def login_mobile():
+    try:
+       
+        data = MobileLoginSchema(**request.get_json())
+    except ValidationError as e:
+        return jsonify({
+            "status": "fail", 
+            "errors": e.errors()
+        }), 400
+    except Exception as e:
+        return jsonify({
+            "status": "fail", 
+            "message": "Invalid JSON"
+        }), 400
+
+  
+    user = db.session.scalar(sa.select(User).where(User.phone_number == data.phone_number))
+
+    if not user:
+        user = User(phone_number=data.phone_number)
+        db.session.add(user)
+        db.session.commit()
+
+    # probably temporary
+    otp = str(randint(100000, 999999))
+    session['otp'] = otp
+    session['otp_time'] = datetime.now().isoformat()
+    session['phone_number'] = data.phone_number
+
+ 
+    try:
+        send_SMS(data.phone_number, otp)
+    except Exception as e:
+        return jsonify({
+            "status": "fail",
+            "message": "Failed to send OTP"
+        }), 500
+
+    return jsonify({
+        "status": "success",
+        "message": f"OTP sent to {data.phone_number}"
+    }), 200
 
 
 @bp.route('/verify_otp', methods=['POST'])
 @otp_required
 @limiter.limit("3 per minute")
 def verify_otp():
-    form = OtpForm()
-    if not form.validate_on_submit():
-        return jsonify({"status": "error","next": session.get("next", "/login/email"), "message": "Invalid form", "errors": form.errors}), 400
+  
+    try:
+        data = OtpSchema(**request.get_json())
+    except ValidationError as e:
+        return jsonify({
+            "status": "error", 
+            "message": "Invalid input",
+            "errors": e.errors()
+        }), 400
+    except Exception:
+        return jsonify({
+            "status": "error", 
+            "message": "Invalid JSON"
+        }), 400
 
-    entered_otp = form.otp.data
+    entered_otp = data.otp
     email = session.get("email")
     phone = session.get("phone_number")
-
     stored_otp = session.get("otp")
     otp_created_time = session.get("otp_time")
 
+   
     if not otp_created_time:
-        return jsonify({"status": "error","next": session.get("next", "/login/email"), "message": "OTP timestamp missing"}), 400
+        return jsonify({"status": "error", "message": "OTP timestamp missing"}), 400
 
-    otp_created_time = datetime.fromisoformat(otp_created_time)
-    if datetime.now() - otp_created_time > timedelta(minutes=5):  # 5 min expiry
-        session.pop("otp", None)
-        session.pop("email", None)
-        session.pop("phone_number",None)
-        session.pop("otp_time", None)
-        return jsonify({"status": "error","next": session.get("next", "/login/email"), "message": "OTP expired"}), 403
+    try:
+        otp_created_time = datetime.fromisoformat(otp_created_time)
+    except ValueError:
+        return jsonify({"status": "error", "message": "Invalid OTP timestamp"}), 400
 
+    
+    if datetime.now() - otp_created_time > timedelta(minutes=5):
+        clear_otp_session()
+        return jsonify({"status": "error", "message": "OTP expired"}), 403
+
+   
     if not (email or phone) or not stored_otp:
-        return jsonify({"status": "error","next": session.get("next", "/login/email"), "message": "Session expired or invalid"}), 400
+        return jsonify({"status": "error", "message": "Session expired or invalid"}), 400
 
+   
     if entered_otp != stored_otp:
-        session.pop("otp", None)
-        session.pop("email", None)
-        session.pop("phone_number",None)
-        session.pop("otp_time", None)
-        return jsonify({"status": "error","next": session.get("next", "/login/email"), "message": "Invalid OTP"}), 401
+        clear_otp_session()
+        return jsonify({"status": "error", "message": "Invalid OTP"}), 401
 
+   
+    user = None
     if email:
         user = db.session.scalar(sa.select(User).where(User.email == email))
     elif phone:
         user = db.session.scalar(sa.select(User).where(User.phone_number == phone))
-    else:
-        return jsonify({"status": "error","next": session.get("next", "/login/email"), "message": "User not found"}), 404
+    
+    if not user:
+        clear_otp_session()
+        return jsonify({"status": "error", "message": "User not found"}), 404
 
-    token = generate_jwt(user)
+    
+    try:
+        token = generate_jwt(user)
+    except Exception as e:
+        return jsonify({"status": "error", "message": "Token generation failed"}), 500
 
-    session.pop("otp", None)
-    session.pop("email", None)
-    session.pop("phone_number",None)
+   
+    clear_otp_session()
 
     return jsonify({
         "status": "success",
-        "next": session.get("next", "/dashboard"),
-        "access_token": token
+        "access_token": token,
+        "user_id": user.id 
     }), 200
 
+
+def clear_otp_session():
+    """Helper function to clear OTP-related session data"""
+    session.pop("otp", None)
+    session.pop("email", None)
+    session.pop("phone_number", None)
+    session.pop("otp_time", None)

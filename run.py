@@ -1,7 +1,7 @@
 import sqlalchemy as sa
 import sqlalchemy.orm as so
 from app import create_app, db
-from app.models import User  # Import your actual User model
+from app.models import User, Payment  
 
 app = create_app()
 
@@ -12,4 +12,5 @@ def make_shell_context():
         'so': so,
         'db': db,
         'User': User,
+        'Payment':Payment
     }
