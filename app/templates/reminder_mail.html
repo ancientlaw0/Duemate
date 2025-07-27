@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+  <body>
+    <h2>Payment Reminder</h2>
+    <p>Hello User,</p>
+    <p>
+      {% if overdue %}
+        Your payment of <strong>{{amount}} </strong>was due on <strong>{{ deadline }}</strong> and is now overdue.
+      {% else %}
+        Your payment of<strong>{{amount}} </strong> is due on <strong>{{ deadline }}</strong>. Please ensure it is completed in time.
+      {% endif %}
+    </p>
+    <p>Kindly take the necessary action to avoid any penalties.</p>
+    <br>
+    <p>If you have already completed the payment, please ignore this message.</p>
+    <h4> Duemate Team</h4>
+  </body>
+</html>

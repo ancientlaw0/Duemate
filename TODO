@@ -1,7 +1,6 @@
 STEP - 1
 
 adding proper mail and sms sending functions when making automated
-flask limiter memory problem
 OTP better logic
 custom redirect when error
 database for otp?
@@ -13,7 +12,23 @@ STEP -2
 
 adding text when others is selected
 
+STEP - 3
 
+mission finding sms api or a better solution!
+implement cron command when donww with frontend
+
+implementataion of sms by using capricorn6 poor man gateway
+
+turn off battery saving
+country code input in the box
+delay to avoid spam
+interval of 10 second to avoid bullshit of getting spammed
+
+implement cron job finally
+
+implementing demo mode
+
+STEP - 4
 
 
 OTHERS - 

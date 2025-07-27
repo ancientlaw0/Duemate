@@ -1,0 +1,1 @@
+Your OTP code is {{ otp }}. It will expire in 5 minutes.

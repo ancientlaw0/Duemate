@@ -24,3 +24,6 @@ node_modules/
 # Local databases
 *.sqlite3
 *.db
+
+
+.env

@@ -12,6 +12,7 @@ from datetime import datetime, timedelta
 from urllib.parse import urlparse, urljoin
 from app import limiter
 from flask_limiter.errors import RateLimitExceeded
+from flask import render_template
 
 def otp_required(f):
     @wraps(f)
@@ -21,6 +22,24 @@ def otp_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
+def send_otp_email(to_email, otp_code):
+    html_body = render_template("otp_email.html", otp=otp_code)
+    text_body = f"Your OTP is: {otp_code}"
+
+    send_email(
+        to=to_email,
+        subject="Duemate Sign In",
+        html=html_body,
+        text=text_body
+    )
+
+def send_otp_sms(to_number, otp_code):
+    sms_text = render_template("otp_sms.txt", otp=otp_code)
+    
+    send_SMS(
+        to_number=to_number,
+        message_text=sms_text
+    )
 
 @bp.errorhandler(RateLimitExceeded)
 def ratelimit_handler(e):
@@ -61,7 +80,7 @@ def login_email():
 
     
     try:
-        send_email(data.email, otp)
+        send_otp_email(data.email, otp)
     except Exception as e:
         return jsonify({
             "status": "fail",

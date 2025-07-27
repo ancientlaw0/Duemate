@@ -1,0 +1,13 @@
+Hello {{ name }},
+
+{% if overdue %}
+Your payment of <strong>{{amount}} </strong> is due on {{ deadline }} is now OVERDUE.
+{% else %}
+Your payment of <strong>{{amount}} </strong>  is due on {{ deadline }}.
+{% endif %}
+
+Please make the payment promptly to avoid any late fees.
+
+If you have already paid, you can ignore this message.
+
+- Duemate Team
