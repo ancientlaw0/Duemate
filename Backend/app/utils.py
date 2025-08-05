@@ -1,18 +1,19 @@
-from resend import Client
-from config import RESEND_API_KEY, RESEND_SENDER, SMS_GATEWAY_CONFIG
 import requests
 import json
 import os
 from requests.auth import HTTPBasicAuth
+from flask import current_app
+import resend
 from datetime import datetime
 from flask_jwt_extended import create_access_token
 
 DEMO_MODE = os.getenv("DEMO_MODE", "false").lower() == "true"
-RESEND_CLIENT = Client(api_key=RESEND_API_KEY)
+
 
 ##FUNCTION FOR EMAIL WITH DEMO COMPATIBILITY
 
 def send_email(to: str, subject: str, html: str, text: str = ""):
+
     if not all([to, subject, html]):
         raise ValueError("Recipient, subject, and HTML body are required.")
 
@@ -22,24 +23,27 @@ def send_email(to: str, subject: str, html: str, text: str = ""):
         return _send_real_email(to, subject, html, text)
 
 
+import smtplib
+from email.message import EmailMessage
+
 def _send_real_email(to: str, subject: str, html: str, text: str = ""):
-  
-    if not all([to, subject, html]):
-        raise ValueError("Recipient, subject, and HTML body are required.")
-
-    payload = {
-        "from": RESEND_SENDER,
-        "to": to,
-        "subject": subject,
-        "html": html,
-    }
-
-    if text:
-        payload["text"] = text
+    msg = EmailMessage()
+    msg["Subject"] = subject
+    msg["From"] = current_app.config["EMAIL_HOST_USER"]
+    msg["To"] = to
+    msg.set_content(text or "This email needs an HTML client.")
+    msg.add_alternative(html, subtype='html')
 
     try:
-        response = RESEND_CLIENT.emails.send(payload)
-        return response
+        with smtplib.SMTP(current_app.config["EMAIL_HOST"], current_app.config["EMAIL_PORT"]) as server:
+            if current_app.config["EMAIL_USE_TLS"]:
+                server.starttls()
+            server.login(
+                current_app.config["EMAIL_HOST_USER"],
+                current_app.config["EMAIL_HOST_PASSWORD"]
+            )
+            server.send_message(msg)
+        return {"status": "success"}
     except Exception as e:
         raise RuntimeError(f"Failed to send email: {e}")
     
@@ -60,7 +64,10 @@ def _send_demo_email(to, subject, html, text=""):
 
 ## FUNCTION FOR SEND SMS WITH DEMO COMPATIBLITY
 
+
+
 def send_sms(to_number: str, message_text: str) -> dict:
+  
     if not to_number.startswith("+"):
         return {"status": 400, "error": "Phone number must include country code, e.g. +91"}
 
@@ -70,6 +77,7 @@ def send_sms(to_number: str, message_text: str) -> dict:
         return _send_real_sms(to_number, message_text)
 
 def _send_real_sms(to_number: str, message_text: str) -> dict:
+    sms = current_app.config["SMS_GATEWAY_CONFIG"]
     if not to_number.startswith("+"):
         return {"status": 400, "error": "Phone number must include country code, e.g. +91"}
 
@@ -80,10 +88,10 @@ def _send_real_sms(to_number: str, message_text: str) -> dict:
 
     try:
         response = requests.post(
-            SMS_GATEWAY_CONFIG["url"],
+            sms["url"],
             headers={"Content-Type": "application/json"},
             data=json.dumps(payload),
-            auth=HTTPBasicAuth(SMS_GATEWAY_CONFIG["username"], SMS_GATEWAY_CONFIG["password"]),
+            auth=HTTPBasicAuth(sms["username"], sms["password"]),
             timeout=5
         )
         response.raise_for_status()

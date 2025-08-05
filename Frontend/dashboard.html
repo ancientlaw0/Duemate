@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Payments Dashboard</title>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Payments Dashboard</h1>
+    </header>
+
+    <main class="dashboard" role="main">
+      <section class="add-payment-form" aria-labelledby="add-payment-heading">
+        <h2 id="add-payment-heading">Add New Payment</h2>
+        <form id="addPaymentForm">
+          <label for="payment_name">Payment Name *</label>
+          <input type="text" id="payment_name" name="payment_name" placeholder="Payment Name" required />
+
+          <label for="description">Description</label>
+          <input type="text" id="description" name="description" placeholder="Description" />
+
+          <label for="amount">Amount *</label>
+          <input type="number" id="amount" name="amount" placeholder="Amount" min="0" step="0.01" required />
+
+          <label for="addCategory">Category *</label>
+          <select id="addCategory" name="category" required>
+            <option value="" disabled selected>Select Category</option>
+            <option value="bills">Bills</option>
+            <option value="subscription">Subscription</option>
+            <option value="loan">Loan</option>
+            <option value="tax">Tax</option>
+            <option value="other">Other</option>
+          </select>
+
+          <label for="deadline">Deadline *</label>
+          <input type="date" id="deadline" name="deadline" required />
+
+          <label for="addStatus">Status *</label>
+          <select id="addStatus" name="status" required>
+            <option value="" disabled selected>Select Status</option>
+            <option value="paid">Paid</option>
+            <option value="pending">Pending</option>
+            <option value="overdue">Overdue</option>
+            <option value="cancelled">CCancelled</option>
+          </select>
+
+          <button type="submit">Add Payment</button>
+        </form>
+      </section>
+
+      <aside class="sidebar" aria-label="Filters and Sorting">
+        <h3>Filters &amp; Sorting</h3>
+
+        <fieldset>
+          <legend>Search Payments</legend>
+          <label for="search" class="visually-hidden">Search</label>
+          <input type="text" id="search" name="search" placeholder="Search payments..." />
+        </fieldset>
+
+        <fieldset>
+          <legend>Status Filter</legend>
+          <label for="filterStatus" class="visually-hidden">Status</label>
+          <select id="filterStatus" name="filterStatus">
+            <option value="" selected>All Status</option>
+            <option value="paid">Paid</option>
+            <option value="pending">Pending</option>
+            <option value="overdue">Overdue</option>
+            <option value="cancelled">Cancelled</option>
+          </select>
+        </fieldset>
+
+        <fieldset>
+          <legend>Category Filter</legend>
+          <label for="filterCategory" class="visually-hidden">Category</label>
+          <select id="filterCategory" name="filterCategory">
+            <option value="" selected>All Categories</option>
+            <option value="bills">Bills</option>
+            <option value="subscription">Subscription</option>
+            <option value="loan">Loan</option>
+            <option value="tax">Tax</option>
+            <option value="other">Other</option>
+          </select>
+        </fieldset>
+
+        <fieldset>
+          <legend>Sort Options</legend>
+          <label for="sortBy">Sort By</label>
+          <select id="sortBy" name="sortBy">
+            <option value="deadline" selected>Deadline</option>
+            <option value="amount">Amount</option>
+            <option value="payment_name">Name</option>
+            <option value="status">Status</option>
+            <option value="category">Category</option>
+          </select>
+
+          <label for="sortOrder">Order</label>
+          <select id="sortOrder" name="sortOrder">
+            <option value="asc" selected>Ascending</option>
+            <option value="desc">Descending</option>
+          </select>
+        </fieldset>
+
+        <button type="button" onclick="loadPayments()">Apply Filters</button>
+        <button type="button" onclick="clearFilters()">Clear All</button>
+      </aside>
+
+      <section class="main-content" aria-live="polite" aria-atomic="true">
+        <div id="loading" class="loading" style="display:none;" aria-live="polite">Loading payments...</div>
+        <div id="error" class="error" style="display:none;" role="alert"></div>
+
+        <table>
+          <caption>List of Payments</caption>
+          <thead>
+            <tr>
+              <th scope="col">Payment Name</th>
+              <th scope="col">Description</th>
+              <th scope="col">Amount</th>
+              <th scope="col">Category</th>
+              <th scope="col">Deadline</th>
+              <th scope="col">Status</th>
+              <th scope="col">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="paymentsTableBody">
+            <!-- JS dynamically injects payment rows here -->
+          </tbody>
+        </table>
+
+        <div id="pagination" class="pagination" aria-label="Pagination navigation"></div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Include your JS file here -->
+  <script src="static/dashboard.js"></script>
+</body>
+</html>

@@ -1,5 +1,6 @@
 from flask import Blueprint
 
-bp = Blueprint('/api', __name__)
+
+bp = Blueprint('main', __name__)
 
 from app.main import routes

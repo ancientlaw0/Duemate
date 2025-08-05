@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Verify OTP</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+    }
+    form {
+      margin-top: 15px;
+    }
+  </style>
+</head>
+<body>
+
+  <h2>Verify OTP</h2>
+  <form id="otp-form">
+    <input type="text" id="otp" name="otp" required placeholder="Enter OTP" />
+    <button type="submit">Verify</button>
+  </form>
+  <p id="otp-message"></p>
+
+  <script src="static/verify.js"></script>
+
+</body>
+</html>

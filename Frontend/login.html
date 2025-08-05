@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Login</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+    }
+    form {
+      margin-bottom: 20px;
+    }
+  </style>
+</head>
+<body>
+
+  <h2>Login with Email</h2>
+  <form id="email-form">
+    <input type="email" id="email" required placeholder="Your email" />
+    <button type="submit">Send OTP</button>
+  </form>
+  <p id="email-message"></p>
+
+  <h2>Login with Mobile</h2>
+  <form id="mobile-form">
+    <input type="tel" id="phone"  placeholder="Your mobile number" />
+    <button type="submit">Send OTP</button>
+  </form>
+  <p id="mobile-message"></p>
+
+  <!-- ✅ Direct static script include -->
+  <script src="static/login.js"></script>
+
+</body>
+</html>
